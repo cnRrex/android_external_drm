@@ -2569,6 +2569,7 @@ static struct {
     char *BusID;
     int fd;
     int refcount;
+    int type;
 } connection[DRM_MAX_FDS];
 
 static int nr_fds = 0;
@@ -2577,23 +2578,30 @@ int drmOpenOnce(void *unused,
 		const char *BusID,
 		int *newlyopened)
 {
+    return drmOpenOnceWithType(BusID, newlyopened, DRM_NODE_PRIMARY);
+}
+
+int drmOpenOnceWithType(const char *BusID, int *newlyopened, int type)
+{
     int i;
     int fd;
    
     for (i = 0; i < nr_fds; i++)
-	if (strcmp(BusID, connection[i].BusID) == 0) {
+	if ((strcmp(BusID, connection[i].BusID) == 0) &&
+	    (connection[i].type == type)) {
 	    connection[i].refcount++;
 	    *newlyopened = 0;
 	    return connection[i].fd;
 	}
 
-    fd = drmOpen(unused, BusID);
+    fd = drmOpenWithType(NULL, BusID, type);
     if (fd <= 0 || nr_fds == DRM_MAX_FDS)
 	return fd;
    
     connection[nr_fds].BusID = strdup(BusID);
     connection[nr_fds].fd = fd;
     connection[nr_fds].refcount = 1;
+    connection[nr_fds].type = type;
     *newlyopened = 1;
 
     if (0)
