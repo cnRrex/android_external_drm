@@ -854,7 +854,7 @@ drmVersionPtr drmGetVersion(int fd)
     if (!version)
 	return NULL;
 
-    memclear(version);
+    memclear(*version);
 
     if (drmIoctl(fd, DRM_IOCTL_VERSION, version)) {
 	drmFreeKernelVersion(version);
