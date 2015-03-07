@@ -53,6 +53,9 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <stdarg.h>
+#ifdef HAVE_SYS_MKDEV_H
+# include <sys/mkdev.h> /* defines major(), minor(), and makedev() on Solaris */
+#endif
 #include <math.h>
 
 /* Not all systems have MAP_FAILED defined */
