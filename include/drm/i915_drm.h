@@ -492,6 +492,8 @@ typedef struct drm_i915_irq_wait {
 #define I915_PARAM_CMD_PARSER_VERSION	 28
 #define I915_PARAM_MMAP_VERSION		 30
 #define I915_PARAM_REVISION              32
+#define I915_PARAM_SUBSLICE_TOTAL	 33
+#define I915_PARAM_EU_TOTAL		 34
 
 /* Private (not upstreamed) parameters start from 0x800   */
 /* This helps to avoid conflicts with new upstream values */

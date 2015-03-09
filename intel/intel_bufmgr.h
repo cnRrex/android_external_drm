@@ -323,6 +323,9 @@ int drm_intel_cmd_parser_append(int fd,
  */
 int i915ExtIoctl(int fd, unsigned long request, void *arg);
 
+int drm_intel_get_subslice_total(int fd, unsigned int *subslice_total);
+int drm_intel_get_eu_total(int fd, unsigned int *eu_total);
+
 /** @{ Compatibility defines to keep old code building despite the symbol rename
  * from dri_* to drm_intel_*
  */
