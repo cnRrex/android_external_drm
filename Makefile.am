@@ -70,7 +70,8 @@ libdrm_la_SOURCES =				\
 	$(LIBDRM_SOURCES)			\
 	xf86atomic.h				\
 	libdrm_lists.h				\
-	util_double_list.h
+	util_double_list.h			\
+	util_math.h
 
 libdrmincludedir = ${includedir}
 libdrminclude_HEADERS = xf86drm.h xf86drmMode.h
