@@ -10,5 +10,4 @@ noinst_PROGRAMS = \
 radeon_ttm_SOURCES = \
 	rbo.c \
 	rbo.h \
-	list.h \
 	radeon_ttm.c

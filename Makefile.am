@@ -69,7 +69,8 @@ AM_CFLAGS = \
 libdrm_la_SOURCES =				\
 	$(LIBDRM_SOURCES)			\
 	xf86atomic.h				\
-	libdrm_lists.h
+	libdrm_lists.h				\
+	util_double_list.h
 
 libdrmincludedir = ${includedir}
 libdrminclude_HEADERS = xf86drm.h xf86drmMode.h

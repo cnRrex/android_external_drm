@@ -30,8 +30,7 @@ libdrm_freedreno_la_SOURCES = \
 	msm/msm_drm.h \
 	msm/msm_pipe.c \
 	msm/msm_priv.h \
-	msm/msm_ringbuffer.c \
-	list.h
+	msm/msm_ringbuffer.c
 
 libdrm_freedrenocommonincludedir = ${includedir}/freedreno
 libdrm_freedrenocommoninclude_HEADERS = freedreno_drmif.h freedreno_ringbuffer.h
