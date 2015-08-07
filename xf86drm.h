@@ -39,7 +39,7 @@
 #include <stdint.h>
 #include <drm.h>
 
-#if defined(__cplusplus) || defined(c_plusplus)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -820,7 +820,7 @@ extern void drmFreeDevices(drmDevicePtr devices[], int count);
 
 extern int Calc_CSC_Param(struct CSCCoeff_Matrix *CSC_Matrix, struct csc_coeff *CSC_Coeff_t, int devid);
 
-#if defined(__cplusplus) || defined(c_plusplus)
+#if defined(__cplusplus)
 }
 #endif
 
