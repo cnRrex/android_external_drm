@@ -2866,6 +2866,8 @@ static char *drmGetMinorNameForFD(int fd, int type)
 
 out_close_dir:
 	closedir(sysdir);
+#else
+#warning "Missing implementation of drmGetMinorNameForFD"
 #endif
 	return NULL;
 }
