@@ -815,6 +815,9 @@ typedef struct _drmDevice {
     } deviceinfo;
 } drmDevice, *drmDevicePtr;
 
+extern int drmGetDevice(int fd, drmDevicePtr *device);
+extern void drmFreeDevice(drmDevicePtr *device);
+
 extern int drmGetDevices(drmDevicePtr devices[], int max_devices);
 extern void drmFreeDevices(drmDevicePtr devices[], int count);
 
