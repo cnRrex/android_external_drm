@@ -3045,21 +3045,22 @@ static int drmProcessPciDevice(drmDevicePtr *device, const char *d_name,
 {
     const int max_node_str = drmGetMaxNodeName();
     int ret, i;
-    void *addr;
+    char *addr;
 
-    addr = *device = calloc(1, sizeof(drmDevice) +
-                               (DRM_NODE_MAX *
-                                (sizeof(void *) + max_node_str)) +
-                               sizeof(drmPciBusInfo) +
-                               sizeof(drmPciDeviceInfo));
+    *device = calloc(1, sizeof(drmDevice) +
+		     (DRM_NODE_MAX * (sizeof(void *) + max_node_str)) +
+		     sizeof(drmPciBusInfo) +
+		     sizeof(drmPciDeviceInfo));
     if (!*device)
         return -ENOMEM;
 
+    addr = (char*)*device;
+  
     (*device)->bustype = DRM_BUS_PCI;
     (*device)->available_nodes = 1 << node_type;
 
     addr += sizeof(drmDevice);
-    (*device)->nodes = addr;
+    (*device)->nodes = (char**)addr;
 
     addr += DRM_NODE_MAX * sizeof(void *);
     for (i = 0; i < DRM_NODE_MAX; i++) {
@@ -3068,7 +3069,7 @@ static int drmProcessPciDevice(drmDevicePtr *device, const char *d_name,
     }
     memcpy((*device)->nodes[node_type], node, max_node_str);
 
-    (*device)->businfo.pci = addr;
+    (*device)->businfo.pci = (drmPciBusInfoPtr)addr;
 
     ret = drmParsePciBusInfo(maj, min, (*device)->businfo.pci);
     if (ret)
@@ -3077,7 +3078,7 @@ static int drmProcessPciDevice(drmDevicePtr *device, const char *d_name,
     // Fetch the device info if the user has requested it
     if (fetch_deviceinfo) {
         addr += sizeof(drmPciBusInfo);
-        (*device)->deviceinfo.pci = addr;
+        (*device)->deviceinfo.pci = (drmPciDeviceInfoPtr)addr;
 
         ret = drmParsePciDeviceInfo(d_name, (*device)->deviceinfo.pci);
         if (ret)
