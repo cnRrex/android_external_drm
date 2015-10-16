@@ -3184,7 +3184,7 @@ int drmGetDevice(int fd, drmDevicePtr *device)
             break;
         default:
             fprintf(stderr, "The subsystem type is not supported yet\n");
-            break;
+            continue;
         }
 
         if (i >= max_count) {
@@ -3288,7 +3288,7 @@ int drmGetDevices(drmDevicePtr devices[], int max_devices)
             break;
         default:
             fprintf(stderr, "The subsystem type is not supported yet\n");
-            break;
+            continue;
         }
 
         if (i >= max_count) {
