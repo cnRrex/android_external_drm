@@ -150,6 +150,23 @@ struct _drm_intel_bufmgr {
 	void (*destroy) (drm_intel_bufmgr *bufmgr);
 
 	/**
+	 * Sets buffer total padded size when buffer is used by the GPU.
+	 *
+	 * This enables dynamic padding to be added without using any backing
+	 * storage. For example handling GPU padding requirements for buffers
+	 * allocated by an entity unaware of the same.
+	 *
+	 * Set padded size remains active until reset (to zero or actual object
+	 * size).
+	 *
+	 * Returns 0 on success or an error code.
+	 *
+	 * \param bo Buffer to set total padded size for
+	 * \param pad_to_size Total size in bytes of object plus padding
+	 */
+	int (*bo_pad_to_size) (drm_intel_bo *bo, uint64_t pad_to_size);
+
+	/**
 	 * Add relocation entry in reloc_buf, which will be updated with the
 	 * target buffer's real offset on on command submission.
 	 *

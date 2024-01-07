@@ -2013,7 +2013,7 @@ decode_3d_1d(struct drm_intel_decode *ctx)
 		for (instr = 0; instr < (len - 1) / 3; instr++) {
 			char instr_prefix[10];
 
-			sprintf(instr_prefix, "PS%03d", instr);
+			snprintf(instr_prefix,sizeof(instr_prefix), "PS%03d", instr);
 			i915_decode_instruction(ctx, i,
 						instr_prefix);
 			i += 3;

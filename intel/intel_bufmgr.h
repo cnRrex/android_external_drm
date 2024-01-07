@@ -196,6 +196,7 @@ int drm_intel_bo_madvise(drm_intel_bo *bo, int madv);
 int drm_intel_bo_disable_reuse(drm_intel_bo *bo);
 int drm_intel_bo_is_reusable(drm_intel_bo *bo);
 int drm_intel_bo_references(drm_intel_bo *bo, drm_intel_bo *target_bo);
+int drm_intel_bo_pad_to_size(drm_intel_bo *bo, uint64_t pad_to_size);
 
 /* drm_intel_bufmgr_gem.c */
 drm_intel_bufmgr *drm_intel_bufmgr_gem_init(int fd, int batch_size);
@@ -304,8 +305,6 @@ int drm_intel_get_reset_stats(drm_intel_context *ctx,
 			      uint32_t *reset_count,
 			      uint32_t *active,
 			      uint32_t *pending);
-
-int do_fence_wait(int fd, uint64_t flags);
 
 int drm_intel_cmd_parser_append(int fd,
 				uint32_t ring,

@@ -52,6 +52,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#ifdef ANDROID
+#include <sync/sync.h>
+#else
+#include <linux/sync.h>
+#endif
 
 #include "errno.h"
 #ifndef ETIME
@@ -73,6 +78,8 @@
 #else
 #define VG(x)
 #endif
+
+#define WANT_USERLAND_FENCES		1
 
 #define VG_CLEAR(s) VG(memset(&s, 0, sizeof(s)))
 
@@ -254,6 +261,11 @@ struct _drm_intel_bo_gem {
 
 	drm_intel_aub_annotation *aub_annotations;
 	unsigned aub_annotation_count;
+
+	/**
+	 * Size to pad the object to.
+	 */
+	uint64_t pad_to_size;
 };
 
 static unsigned int
@@ -522,8 +534,8 @@ drm_intel_add_validate_buffer2(drm_intel_bo *bo, int need_fence)
 	bufmgr_gem->exec2_objects[index].alignment = 0;
 	bufmgr_gem->exec2_objects[index].offset = 0;
 	bufmgr_gem->exec_bos[index] = bo;
-	bufmgr_gem->exec2_objects[index].flags = 0;
-	bufmgr_gem->exec2_objects[index].rsvd1 = 0;
+	bufmgr_gem->exec2_objects[index].flags = bo_gem->pad_to_size ? EXEC_OBJECT_PAD_TO_SIZE : 0;
+	bufmgr_gem->exec2_objects[index].pad_to_size = bo_gem->pad_to_size;
 	bufmgr_gem->exec2_objects[index].rsvd2 = 0;
 	if (need_fence) {
 		bufmgr_gem->exec2_objects[index].flags |=
@@ -1324,6 +1336,8 @@ drm_intel_gem_bo_unreference_final(drm_intel_bo *bo, time_t time)
 	DBG("bo_unreference final: %d (%s)\n",
 	    bo_gem->gem_handle, bo_gem->name);
 
+	bo_gem->pad_to_size = 0;
+
 	/* release memory associated with this object */
 	if (bo_gem->reloc_target_info) {
 		free(bo_gem->reloc_target_info);
@@ -2074,6 +2088,19 @@ do_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 	return 0;
 }
 
+ static int
+drm_intel_gem_bo_pad_to_size(drm_intel_bo *bo, uint64_t pad_to_size)
+{
+	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
+
+	if (pad_to_size && pad_to_size < bo->size)
+		return -EINVAL;
+
+	bo_gem->pad_to_size = pad_to_size;
+	return 0;
+}
+
+
 static int
 drm_intel_gem_bo_emit_reloc(drm_intel_bo *bo, uint32_t offset,
 			    drm_intel_bo *target_bo, uint32_t target_offset,
@@ -2606,6 +2633,70 @@ drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 }
 
 static int
+do_fence_wait(int fd, uint64_t flags)
+{
+	/* Temporary solution waits in userland */
+	int rc = -ENOENT;
+	struct sync_fence_info_data *info;
+	unsigned int same_ring = 0;
+	struct sync_pt_info *pt_info = NULL;
+	struct drm_i915_gem_syncpt_driver_data *data;
+	static const char driver_name[] = "i915_syn";
+	static const uint64_t *driver_name_check = (uint64_t *)driver_name;
+	uint64_t *driver_name_pt;
+
+	if (fd < 0)
+		return rc;
+
+	/* Optimisation: Avoiding waiting on fences on same ring. */
+	flags &= I915_EXEC_RING_MASK;
+	info = sync_fence_info(fd);
+	if (info) {
+		same_ring = 1;
+		while ((pt_info = sync_pt_info(info, pt_info))) {
+			data = (struct drm_i915_gem_syncpt_driver_data *)
+					&pt_info->driver_data;
+			driver_name_pt = (uint64_t *)&pt_info->driver_name[0];
+			if (*driver_name_pt != *driver_name_check
+			     || flags != (data->flags & I915_EXEC_RING_MASK)) {
+				same_ring = 0;
+				break;
+			}
+		}
+		sync_fence_info_free(info);
+	}
+
+	/* KMD doesn't currently support this so
+	 * wait on the fence here instead. This
+	 * is a blocking wait so it is not friendly
+	 * to the caller...
+	 */
+	if (same_ring) {
+		rc = 0;
+	} else {
+		sync_wait(fd, -1);
+
+		info = sync_fence_info(fd);
+		if (!info) {
+			/* EIO if an arbitrary choice for the error code.
+			 * The called function either fails due to ENOMEM
+			 * or error return from an ioctl.
+			 */
+			rc = -EIO;
+		} else {
+			if (info->status != 1) {
+				rc = -ETIMEDOUT;
+			} else
+				rc = 0;
+
+			sync_fence_info_free(info);
+		}
+	}
+
+	return rc;
+}
+
+static int
 do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 	 drm_clip_rect_t *cliprects, int num_cliprects, int DR4,
 	 unsigned int flags, int fence_in, int *fence_out)
@@ -2635,6 +2726,14 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 		break;
 	}
 
+#if WANT_USERLAND_FENCES
+	if (fence_in >= 0) {
+		/* Temporary measure: KMD cannot support fence_in so block on
+		* it here instead */
+		do_fence_wait(fence_in, flags);
+	}
+#endif
+
 	pthread_mutex_lock(&bufmgr_gem->lock);
 	/* Update indices and set up the validate list. */
 	drm_intel_gem_bo_process_reloc2(bo);
@@ -2656,9 +2755,14 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 	execbuf.flags = flags;
 
 	if (fence_in >= 0) {
-		flags |= I915_EXEC_WAIT_FENCE;
+#if WANT_USERLAND_FENCES
+		execbuf.rsvd2 = 0;
+#else
+		execbuf.flags |= I915_EXEC_WAIT_FENCE;
 		execbuf.rsvd2 = fence_in;
-	}
+#endif
+	} else
+		execbuf.rsvd2 = 0;
 
 	if (fence_out != NULL) {
 		execbuf.flags |= I915_EXEC_REQUEST_FENCE;
@@ -2671,7 +2775,6 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 		i915_execbuffer2_set_context_id(execbuf, 0);
 	else
 		i915_execbuffer2_set_context_id(execbuf, ctx->ctx_id);
-	execbuf.rsvd2 = 0;
 
 	aub_exec(bo, flags, used);
 
@@ -2692,6 +2795,11 @@ do_exec2(drm_intel_bo *bo, int used, drm_intel_context *ctx,
 							      bufmgr_gem->exec_count),
 			    (unsigned int) bufmgr_gem->gtt_size);
 		}
+	}
+
+	if (fence_in >= 0) {
+		/* Ownership is transferred so close it */
+		close(fence_in);
 	}
 
 	if (fence_out != NULL)
@@ -2751,11 +2859,8 @@ drm_intel_gem_bo_context_fence_exec(drm_intel_bo *bo, drm_intel_context *ctx,
 			      int used, unsigned int flags,
 				int fence_in, int *fence_out)
 {
-        if (fence_out)
-                *fence_out = -1;
-
-	if (fence_in >= 0)
-		do_fence_wait(fence_in, flags);
+	if (fence_out)
+		*fence_out = -1;
 
 	return do_exec2(bo, used, ctx, NULL, 0, 0, flags, fence_in, fence_out);
 }
@@ -3962,6 +4067,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	bufmgr_gem->bufmgr.bo_subdata = drm_intel_gem_bo_subdata;
 	bufmgr_gem->bufmgr.bo_get_subdata = drm_intel_gem_bo_get_subdata;
 	bufmgr_gem->bufmgr.bo_wait_rendering = drm_intel_gem_bo_wait_rendering;
+	bufmgr_gem->bufmgr.bo_pad_to_size = drm_intel_gem_bo_pad_to_size;
 	bufmgr_gem->bufmgr.bo_emit_reloc = drm_intel_gem_bo_emit_reloc;
 	bufmgr_gem->bufmgr.bo_emit_reloc_fence = drm_intel_gem_bo_emit_reloc_fence;
 	bufmgr_gem->bufmgr.bo_pin = drm_intel_gem_bo_pin;

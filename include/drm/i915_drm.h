@@ -416,9 +416,12 @@ struct drm_i915_disp_screen_control {
 
 /* Extended ioctl definitions */
 #define DRM_I915_EXT_USERDATA		0x0
+#define DRM_I915_GEM_FALLOCATE		0x1
 
 #define DRM_IOCTL_I915_EXT_USERDATA \
 			DRM_IOWR(DRM_I915_EXT_USERDATA, struct drm_i915_gem_userdata_blk)
+#define DRM_IOCTL_I915_GEM_FALLOCATE \
+		DRM_IOW(DRM_I915_GEM_FALLOCATE, struct drm_i915_gem_fallocate)
 
 /* Allow drivers to submit batchbuffers directly to hardware, relying
  * on the security mechanisms provided by hardware.
@@ -484,12 +487,15 @@ typedef struct drm_i915_irq_wait {
 #define I915_PARAM_HAS_EXEC_HANDLE_LUT   26
 #define I915_PARAM_HAS_WT     	 	 27
 #define I915_PARAM_CMD_PARSER_VERSION	 28
-#define I915_PARAM_EU_COUNT              30
-#define I915_PARAM_MMAP_VERSION		 31
+#define I915_PARAM_MMAP_VERSION		 30
 
-/* Private (not upstreamed) parameters start from 96      */
+/* Private (not upstreamed) parameters start from 0x800   */
 /* This helps to avoid conflicts with new upstream values */
-#define I915_PARAM_DPST_ACTIVE		 96 
+#define I915_PARAM_DPST_ACTIVE		 0x800
+#define I915_PARAM_EU_COUNT   		 0x801
+#define I915_PARAM_HAS_RS                0x802
+#define I915_PARAM_HAS_GEM_FALLOCATE	 0x803
+
 #define I915_DPST_NEW_API
 
 typedef struct drm_i915_getparam {
@@ -586,6 +592,31 @@ struct drm_i915_gem_create {
 	 */
 	__u32 handle;
 	__u32 pad;
+};
+
+struct drm_i915_gem_fallocate {
+	/**
+	 * Start position of the range
+	 *
+	 * This should be page-aligned.
+	 */
+	__u64 start;
+	/**
+	 * Length of the range
+	 *
+	 * This should be page-aligned.
+	 */
+	__u64 length;
+	/**
+	 * Mode applied to the range
+	 */
+	__u32 mode;
+#define I915_GEM_FALLOC_UNCOMMIT    0
+#define I915_GEM_FALLOC_COMMIT      1
+	/**
+	 * handle for the object being manipulated
+	 */
+	__u32 handle;
 };
 
 struct drm_i915_gem_pread {
@@ -821,10 +852,15 @@ struct drm_i915_gem_exec_object2 {
 #define EXEC_OBJECT_NEEDS_FENCE (1<<0)
 #define EXEC_OBJECT_NEEDS_GTT	(1<<1)
 #define EXEC_OBJECT_WRITE	(1<<2)
-#define __EXEC_OBJECT_UNKNOWN_FLAGS -(EXEC_OBJECT_WRITE<<1)
+#define EXEC_OBJECT_PAD_TO_SIZE (1<<3)
+#define __EXEC_OBJECT_UNKNOWN_FLAGS -(EXEC_OBJECT_PAD_TO_SIZE<<1)
 	__u64 flags;
 
-	__u64 rsvd1;
+	union {
+		__u64 rsvd1;
+		__u64 pad_to_size;
+	};
+
 	__u64 rsvd2;
 };
 
@@ -895,23 +931,36 @@ struct drm_i915_gem_execbuffer2 {
  */
 #define I915_EXEC_HANDLE_LUT		(1<<12)
 
+#define __I915_EXEC_UNKNOWN_FLAGS -(I915_EXEC_HANDLE_LUT<<1)
+
+/** Private (not upstreamed) exec flags start from 24
+ * this helps to avoid conflict with new upstream values
+ */
+#define I915_EXEC_PRIVATE_FLAGS_START	(1<<24)
+
 /* Caller supplies a sync fence fd in the rsvd2 field.
 * Wait for it to be signalled before starting the work*/
-#define I915_EXEC_WAIT_FENCE		(1<<13)
+#define I915_EXEC_WAIT_FENCE		(1<<24)
 
 /* Caller wants a sync fence fd for this execbuffer.
 *  It will be returned in rsvd2 */
-#define I915_EXEC_REQUEST_FENCE		(1<<14)
+#define I915_EXEC_REQUEST_FENCE		(1<<25)
 
-/** Flag to request Watchdog timer support for a batch buffer */
-#define I915_EXEC_ENABLE_WATCHDOG	(1<<15)
+/* Enable watchdog timer for this batch buffer */
+#define I915_EXEC_ENABLE_WATCHDOG	(1<<26)
 
 /** Tell the kernel that the batchbuffer is processed by
  *  the resource streamer.
  */
-#define I915_EXEC_RESOURCE_STREAMER	(1<<16)
+#define I915_EXEC_RESOURCE_STREAMER	(1<<27)
 
-#define __I915_EXEC_UNKNOWN_FLAGS -(I915_EXEC_RESOURCE_STREAMER<<1)
+#define I915_EXEC_PRIVATE_FLAGS_END	(1<<28)
+
+#define __I915_EXEC_PRIVATE_FLAGS_MASK \
+	((-I915_EXEC_PRIVATE_FLAGS_START) & ~(-I915_EXEC_PRIVATE_FLAGS_END))
+
+#define I915_EXEC_UNKNOWN_FLAGS \
+	(__I915_EXEC_UNKNOWN_FLAGS & ~__I915_EXEC_PRIVATE_FLAGS_MASK)
 
 #define I915_EXEC_CONTEXT_ID_MASK	(0xffffffff)
 #define i915_execbuffer2_set_context_id(eb2, context) \
