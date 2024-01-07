@@ -32,7 +32,20 @@ LIBDRM_TOP := $(LOCAL_PATH)
 # Import variable LIBDRM_SOURCES.
 include $(LOCAL_PATH)/sources.mk
 
+common_CFLAGS := -DHAVE_LIBDRM_ATOMIC_PRIMITIVES=1
+
+# Static library for the device (recovery)
+include $(CLEAR_VARS)
+LOCAL_MODULE_TAGS := optional
+LOCAL_SRC_FILES := $(LIBDRM_SOURCES)
+LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH) $(LOCAL_PATH)/include/drm $(LOCAL_PATH)/intel
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/drm
+LOCAL_CFLAGS := $(common_CFLAGS)
 LOCAL_MODULE := libdrm
+include $(BUILD_STATIC_LIBRARY)
+
+# Dynamic library for the device
+include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := $(LIBDRM_SOURCES)
@@ -41,11 +54,11 @@ LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/include/drm $(LOCAL_PATH)/intel $(L
 LOCAL_C_INCLUDES := \
 	$(LIBDRM_TOP)/include/drm
 
-LOCAL_CFLAGS := \
-	-DHAVE_LIBDRM_ATOMIC_PRIMITIVES=1
+LOCAL_CFLAGS := $(common_CFLAGS)
 
 LOCAL_COPY_HEADERS :=            \
 	xf86drm.h                \
+	xf86drmMode.h            \
 	include/drm/drm_fourcc.h \
 	include/drm/drm.h        \
 	include/drm/drm_mode.h   \
@@ -55,6 +68,8 @@ LOCAL_COPY_HEADERS :=            \
 	intel/intel_bufmgr.h     \
 
 LOCAL_COPY_HEADERS_TO := libdrm
+
+LOCAL_MODULE := libdrm
 include $(BUILD_SHARED_LIBRARY)
 
 include $(LOCAL_PATH)/intel/Android.mk
