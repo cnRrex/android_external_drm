@@ -366,6 +366,18 @@ int drm_intel_bo_get_userdata_blk(drm_intel_bo *bo,
 	return -ENODEV;
 }
 
+int drm_intel_bo_fallocate(drm_intel_bo *bo,
+				      uint32_t mode,
+				      uint64_t offset,
+				      uint64_t bytes)
+{
+	if (bo->bufmgr->bo_fallocate)
+		return bo->bufmgr->bo_fallocate(bo, mode,
+						       offset, bytes);
+
+	return -ENODEV;
+}
+
 
 int drm_intel_bo_disable_reuse(drm_intel_bo *bo)
 {

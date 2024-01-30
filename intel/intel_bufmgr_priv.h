@@ -377,6 +377,20 @@ struct _drm_intel_bufmgr {
 				       uint32_t	     bytes,
 				       void         *data,
 				       uint32_t     *avail_bytes);
+	/**
+	 * Releases/creates an object's backing store
+	 *
+	 * \param bo Buffer whose backing pages are manipulated
+	 * \param mode   supports two modes
+	 *               uncommit - releases the backing pages of obj
+	 *               commit - creates new backing pages and updates obj
+	 * \param offset  Starting position of the range (should be page-aligned)
+	 * \param bytes   Length of the range (should be page-aligned)
+	 */
+	int (*bo_fallocate)    (drm_intel_bo *bo,
+						uint32_t     mode,
+						uint64_t     offset,
+						uint64_t     bytes);
 
 	/**< Enables verbose debugging printouts */
 	int debug;

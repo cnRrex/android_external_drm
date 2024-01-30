@@ -187,6 +187,10 @@ int drm_intel_bo_get_userdata_blk(drm_intel_bo *bo,
 				  uint32_t      bytes,
 				  void         *data,
 				  uint32_t     *avail_bytes);
+int drm_intel_bo_fallocate(drm_intel_bo *bo,
+			   uint32_t mode,
+			   uint64_t offset,
+			   uint64_t bytes);
 
 int drm_intel_bo_flink(drm_intel_bo *bo, uint32_t * name);
 int drm_intel_bo_prime(drm_intel_bo *bo, uint32_t * name);
