@@ -32,7 +32,7 @@ LIBDRM_TOP := $(LOCAL_PATH)
 # Import variable LIBDRM_SOURCES.
 include $(LOCAL_PATH)/sources.mk
 
-common_CFLAGS := -DHAVE_LIBDRM_ATOMIC_PRIMITIVES=1
+common_CFLAGS := -DHAVE_LIBDRM_ATOMIC_PRIMITIVES=1 -Wno-error=int-conversion -Wno-error=tautological-pointer-compare
 
 # Static library for the device (recovery)
 include $(CLEAR_VARS)
