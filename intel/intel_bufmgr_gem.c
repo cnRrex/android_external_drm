@@ -3799,7 +3799,7 @@ drm_intel_get_subslice_total(int fd, unsigned int *subslice_total)
 	drm_i915_getparam_t gp;
 	int ret;
 
-	memclear(gp);
+	VG_CLEAR(gp);
 	gp.value = (int*)subslice_total;
 	gp.param = I915_PARAM_SUBSLICE_TOTAL;
 	ret = drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
@@ -3815,7 +3815,7 @@ drm_intel_get_eu_total(int fd, unsigned int *eu_total)
 	drm_i915_getparam_t gp;
 	int ret;
 
-	memclear(gp);
+	VG_CLEAR(gp);
 	gp.value = (int*)eu_total;
 	gp.param = I915_PARAM_EU_TOTAL;
 	ret = drmIoctl(fd, DRM_IOCTL_I915_GETPARAM, &gp);
