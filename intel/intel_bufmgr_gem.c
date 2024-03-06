@@ -3793,7 +3793,7 @@ drm_intel_reg_read(drm_intel_bufmgr *bufmgr,
 	return ret;
 }
 
-drm_public int
+int
 drm_intel_get_subslice_total(int fd, unsigned int *subslice_total)
 {
 	drm_i915_getparam_t gp;
@@ -3809,7 +3809,7 @@ drm_intel_get_subslice_total(int fd, unsigned int *subslice_total)
 	return 0;
 }
 
-drm_public int
+int
 drm_intel_get_eu_total(int fd, unsigned int *eu_total)
 {
 	drm_i915_getparam_t gp;
